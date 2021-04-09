@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <EditText
+        android:id="@+id/editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:inputType="textPersonName"
+        android:textSize="@dimen/text_size"
+        android:text=""
+        android:hint="@string/title_hint"/>
+
+    <Button
+        android:id="@+id/buttonNewNote"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+      android:layout_weight="0"
+        android:text="@string/add_new_note" />
+</LinearLayout>
