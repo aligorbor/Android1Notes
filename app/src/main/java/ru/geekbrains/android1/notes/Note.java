@@ -7,14 +7,16 @@ public class Note implements Serializable {
     private String title;
     private String description;
     private Date date;
-    private int teg;
+    private int tag;
+    private boolean like;
     private String noteText;
     private String titleForList;
 
     public Note() {
         title = "";
         description = "";
-        teg = 0;
+        tag = 0;
+        like=false;
         noteText = "";
         date = new Date();
         titleForList = "";
@@ -44,12 +46,12 @@ public class Note implements Serializable {
         this.date = date;
     }
 
-    public int getTeg() {
-        return teg;
+    public int getTag() {
+        return tag;
     }
 
-    public void setTeg(int teg) {
-        this.teg = teg;
+    public void setTag(int tag) {
+        this.tag = tag;
     }
 
     public String getNoteText() {
@@ -66,6 +68,14 @@ public class Note implements Serializable {
 
     public void setTitleForList(String titleForList) {
         this.titleForList = titleForList;
+    }
+
+    public boolean isLike() {
+        return like;
+    }
+
+    public void setLike(boolean like) {
+        this.like = like;
     }
 
 }
