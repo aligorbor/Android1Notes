@@ -1,3 +1,35 @@
 <resources>
     <string name="app_name">Notes</string>
+    <string name="title_hint">Title</string>
+    <string name="add_new_note">+</string>
+    <string name="date_format">yyyy-MM-dd hh:mm</string>
+    <string name="hint_note">Input here your note</string>
+    <string name="search">search</string>
+    <string name="add">add</string>
+    <string name="view">list/cards</string>
+    <string name="sort">sort</string>
+    <string name="share">share</string>
+    <string name="add_link">add link</string>
+    <string name="add_photo">add photo</string>
+    <string name="note_tag">Tag</string>
+    <string name="note_date">Date</string>
+    <string name="note_tag1">Work</string>
+    <string name="note_tag2">Personal</string>
+    <string name="note_tag3">Everyday</string>
+    <string name="note_tag_none">No tag</string>
+    <string name="settings">Settings</string>
+    <string name="tags">Tags</string>
+    <string name="favorite">Favorite</string>
+    <string name="notes_icon">NotesIcon</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="set_font_size">Font size</string>
+    <string name="set_big">Big</string>
+    <string name="set_medium">Medium</string>
+    <string name="set_small">Small</string>
+    <string name="set_sort_by">Sort by</string>
+    <string name="set_creation_date">Creation date</string>
+    <string name="set_modification_date">Modification date</string>
+    <string name="save_and_close">save and close</string>
 </resources>
