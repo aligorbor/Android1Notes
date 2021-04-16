@@ -1,0 +1,12 @@
+<resources>
+    <dimen name="text_margin">16dp</dimen>
+    <dimen name="text_size">18sp</dimen>
+    <dimen name="text_sizeL">8sp</dimen>
+    <dimen name="note_header_height">200dp</dimen>
+    <dimen name="note_header_dimen">42sp</dimen>
+    <dimen name="set_margin">40dp</dimen>
+
+    <dimen name="textDescription">20sp</dimen>
+    <dimen name="textTitle">25sp</dimen>
+
+</resources>
