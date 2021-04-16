@@ -10,11 +10,10 @@
     tools:showIn="@layout/app_bar_main">
 
     <FrameLayout
-        android:id="@+id/fragment_list"
+        android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1">
+        android:layout_weight="1"/>
 
-    </FrameLayout>
 
 </LinearLayout>

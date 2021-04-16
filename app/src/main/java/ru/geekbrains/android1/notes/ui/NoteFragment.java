@@ -1,10 +1,10 @@
-package ru.geekbrains.android1.notes;
+package ru.geekbrains.android1.notes.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.os.Bundle;
 
@@ -20,52 +20,68 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.DatePicker;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.TimePicker;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
+
+import ru.geekbrains.android1.notes.MainActivity;
+import ru.geekbrains.android1.notes.R;
+import ru.geekbrains.android1.notes.data.NoteData;
+import ru.geekbrains.android1.notes.observe.Publisher;
 
 
 public class NoteFragment extends Fragment {
-    private static final String ARG_NOTE_KEY = "noteKey";
-    private int noteKey;
-    private Notes notes;
-    private Note note;
+    private static final String ARG_NOTE_DATA = "Param_NoteData";
+    private NoteData noteData;
+    private Publisher publisher;
+
     private EditText editTextTitle;
     private EditText editTextNote;
     private TextView textNoteTag;
     private TextView textNoteDate;
+    private CheckBox checkNoteLike;
     private final Calendar today = Calendar.getInstance();
-    private boolean isLandscape;
 
     public NoteFragment() {
         // Required empty public constructor
     }
 
-    public static NoteFragment newInstance(int noteKey1) {
+    public static NoteFragment newInstance(NoteData noteData) {
         NoteFragment fragment = new NoteFragment();
         Bundle args = new Bundle();
-        args.putInt(ARG_NOTE_KEY, noteKey1);
+        args.putParcelable(ARG_NOTE_DATA, noteData);
         fragment.setArguments(args);
         return fragment;
+    }
+
+    public static NoteFragment newInstance() {
+        return new NoteFragment();
     }
 
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        notes = ((NotesGetter) context).getNotes(); // получим класс заметок
+        MainActivity activity = (MainActivity) context;
+        publisher = activity.getPublisher();
+    }
+
+    @Override
+    public void onDetach() {
+        publisher = null;
+        super.onDetach();
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            noteKey = getArguments().getInt(ARG_NOTE_KEY);
+            noteData = getArguments().getParcelable(ARG_NOTE_DATA);
         }
     }
 
@@ -74,33 +90,37 @@ public class NoteFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_note, container, false);
+        initView(view);
         setHasOptionsMenu(true);
         initPopupMenu(view);
+        if (noteData != null) {
+            fillViews();
+        }
+        initDatePickerDialog();
         return view;
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        initView(view);
-        fillViews();
-        initDatePickerDialog();
+    public void onStop() {
+        super.onStop();
+        noteData = collectNoteData();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        publisher.notifySingle(noteData);
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        fillNote();
+        //    fillNote();
     }
 
     @Override
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         inflater.inflate(R.menu.main_fragment_note, menu);
-        menu.findItem(R.id.action_search).setVisible(false);
-        menu.findItem(R.id.action_add).setVisible(false);
-        menu.findItem(R.id.action_view).setVisible(false);
-        menu.findItem(R.id.action_sort).setVisible(false);
-        // super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
@@ -112,14 +132,9 @@ public class NoteFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
+    @SuppressLint("NonConstantResourceId")
     private boolean navigateOptionsMenu(int id) {
         switch (id) {
-            case R.id.action_post:
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE)
-                    fillNote();
-                else
-                    getActivity().onBackPressed();
-                return true;
             case R.id.action_share:
                 Toast.makeText(getContext(), "action_share", Toast.LENGTH_SHORT).show();
                 return true;
@@ -161,36 +176,25 @@ public class NoteFragment extends Fragment {
         editTextNote = view.findViewById(R.id.editTextNote);
         textNoteTag = view.findViewById(R.id.textNoteTag);
         textNoteDate = view.findViewById(R.id.textNoteDate);
+        checkNoteLike = view.findViewById(R.id.checkNoteLike);
     }
 
     private void fillViews() {
-        note = notes.getNote(noteKey);
-        if (note != null) {
-            editTextTitle.setText(note.getTitle());
-            editTextNote.setText(note.getNoteText());
-            textNoteTag.setText(getNoteTag(note.getTag()));
-
-            today.setTime(note.getDate());
-            setInitialDateTime();
-        }
+        editTextTitle.setText(noteData.getTitle());
+        editTextNote.setText(noteData.getNoteText());
+        textNoteTag.setText(getNoteTag(noteData.getTag()));
+        checkNoteLike.setChecked(noteData.isLike());
+        today.setTime(noteData.getDate());
+        setInitialDateTime();
     }
 
-    private void fillNote() {
-        note = notes.getNote(noteKey);
-        if (note != null) {
-            note.setTitle(editTextTitle.getText().toString());
-            note.setNoteText(editTextNote.getText().toString());
-            note.setTag(setNoteTag(textNoteTag.getText().toString()));
-
-            SimpleDateFormat dt = new SimpleDateFormat(getResources().getString(R.string.date_format));
-
-            Date date = new Date(today.getTimeInMillis());
-
-            note.setDate(date);
-
-            String titleList = note.getTitle() + "\n" + dt.format(note.getDate());
-            note.setTitleForList(titleList);
-        }
+    private NoteData collectNoteData() {
+        String textTitle = editTextTitle.getText().toString();
+        String textNote = editTextNote.getText().toString();
+        int tag = setNoteTag(textNoteTag.getText().toString());
+        Date date = new Date(today.getTimeInMillis());
+        boolean like = checkNoteLike.isChecked();
+        return new NoteData(textTitle, date, tag, like, textNote);
     }
 
     private String getNoteTag(int tag) {
@@ -212,7 +216,7 @@ public class NoteFragment extends Fragment {
         if (strTag.equals(getString(R.string.note_tag1))) return 1;
         if (strTag.equals(getString(R.string.note_tag2))) return 2;
         if (strTag.equals(getString(R.string.note_tag3))) return 3;
-        return -1;
+        return 0;
     }
 
     private void initDatePickerDialog() {
@@ -244,9 +248,11 @@ public class NoteFragment extends Fragment {
     };
 
     private void setInitialDateTime() {
+        //  SimpleDateFormat dt = new SimpleDateFormat(getResources().getString(R.string.date_format), Locale.getDefault());
         textNoteDate.setText(DateUtils.formatDateTime(getContext(),
                 today.getTimeInMillis(),
                 DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR
                         | DateUtils.FORMAT_SHOW_TIME));
     }
+
 }

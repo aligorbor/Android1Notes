@@ -3,34 +3,45 @@ package ru.geekbrains.android1.notes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.material.navigation.NavigationView;
 
+import ru.geekbrains.android1.notes.observe.Publisher;
+import ru.geekbrains.android1.notes.ui.ListNotesFragment;
+import ru.geekbrains.android1.notes.ui.SettingsFragment;
 
-public class MainActivity extends AppCompatActivity implements PublisherGetter, NotesGetter {
+
+public class MainActivity extends AppCompatActivity {
     private final static String KEY_NOTES = "Notes";
+
+    private Navigation navigation;
     private final Publisher publisher = new Publisher();
-    private Notes notes = new Notes();
+    //  private NotesSourceImpl data;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        if (savedInstanceState == null)
-            initFragments();
+
+        navigation = new Navigation(getSupportFragmentManager());
+        //     if(savedInstanceState ==null)
+        //           data = new NotesSourceImpl(getResources()).init();
         initView();
+
+        initFragments();
     }
 
     private void initView() {
@@ -61,61 +72,29 @@ public class MainActivity extends AppCompatActivity implements PublisherGetter, 
             }
             return false;
         });
-    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        menu.clear();
-        getMenuInflater().inflate(R.menu.main, menu);
-        MenuItem search = menu.findItem(R.id.action_search);
-        SearchView searchText = (SearchView) search.getActionView();
-        searchText.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show();
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return true;
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager.addOnBackStackChangedListener(() -> {
+            if (fragmentManager.getBackStackEntryCount() > 0) {
+                // show back button
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+                getSupportActionBar().setHomeButtonEnabled(true);
+                toolbar.setNavigationOnClickListener(v -> onBackPressed());
+            } else {
+                //show hamburger
+                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+                getSupportActionBar().setHomeButtonEnabled(false);
+                toggle.syncState();
+                toolbar.setNavigationOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
             }
         });
-        return true;
-        //    return super.onCreateOptionsMenu(menu);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-        if (navigateOptionsMenu(id)) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private boolean navigateOptionsMenu(int id) {
-        switch (id) {
-            case R.id.action_add:
-                publisher.notifyNote("");
-                return true;
-            case R.id.action_view:
-                Toast.makeText(MainActivity.this, "action_view", Toast.LENGTH_SHORT).show();
-                return true;
-            case R.id.action_sort:
-                Toast.makeText(MainActivity.this, "action_sort", Toast.LENGTH_SHORT).show();
-                return true;
-            case R.id.action_search:
-                Toast.makeText(MainActivity.this, "action_search", Toast.LENGTH_SHORT).show();
-                return true;
-        }
-        return false;
-    }
-
+    @SuppressLint("NonConstantResourceId")
     private boolean navigateNavigationMenu(int id) {
         switch (id) {
             case R.id.action_settings:
-                addFragment(new SettingsFragment(), true);
+                getNavigation().addFragment(SettingsFragment.newInstance(), true);
                 return true;
             case R.id.action_tag:
                 Toast.makeText(MainActivity.this, "action_tag", Toast.LENGTH_SHORT).show();
@@ -128,42 +107,47 @@ public class MainActivity extends AppCompatActivity implements PublisherGetter, 
     }
 
     private void initFragments() {
-        ListNotesFragment listFragment = new ListNotesFragment();
-        publisher.subscribe(listFragment);
-        addFragment(listFragment, false);
-
-    }
-
-    private void addFragment(Fragment fragment, boolean useBackStack) {
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragment_list, fragment);
-        if (useBackStack) {
-            fragmentTransaction.addToBackStack(null);
-        }
-        fragmentTransaction.commit();
+        getNavigation().addFragment(ListNotesFragment.newInstance(), false);
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putSerializable(KEY_NOTES, notes);
+        //    outState.putSerializable(KEY_NOTES, data);
     }
 
     @Override
     protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        notes = (Notes) savedInstanceState.getSerializable(KEY_NOTES);
-        initFragments();
+        //    data = (NotesSourceImpl) savedInstanceState.getSerializable(KEY_NOTES);
+        //  initFragments();
     }
 
-    @Override
     public Publisher getPublisher() {
         return publisher;
     }
 
+    public Navigation getNavigation() {
+        return navigation;
+    }
+
     @Override
-    public Notes getNotes() {
-        return notes;
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        //https://ru.stackoverflow.com/questions/250093
+        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if (v instanceof EditText) {
+                v.clearFocus();
+                InputMethodManager imm = (InputMethodManager) this.getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+            }
+        }
+        return super.dispatchTouchEvent(ev);
     }
 }

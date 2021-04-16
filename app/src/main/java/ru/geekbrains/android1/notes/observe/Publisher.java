@@ -1,10 +1,12 @@
-package ru.geekbrains.android1.notes;
+package ru.geekbrains.android1.notes.observe;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import ru.geekbrains.android1.notes.data.NoteData;
+
 public class Publisher {
-    private List<Observer> observers;   // Все обозреватели
+    private final List<Observer> observers;   // Все обозреватели
 
     public Publisher() {
         observers = new ArrayList<>();
@@ -21,9 +23,10 @@ public class Publisher {
     }
 
     // Разослать событие
-    public void notifyNote(String text) {
+    public void notifySingle(NoteData noteData) {
         for (Observer observer : observers) {
-            observer.updateNotes(text);
+            observer.updateNoteData(noteData);
+            unsubscribe(observer);
         }
     }
 }
