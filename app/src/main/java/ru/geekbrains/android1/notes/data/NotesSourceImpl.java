@@ -4,8 +4,7 @@ import android.content.res.Resources;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import ru.geekbrains.android1.notes.R;
 

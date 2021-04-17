@@ -2,6 +2,6 @@ package ru.geekbrains.android1.notes.observe;
 
 import ru.geekbrains.android1.notes.data.NoteData;
 
-public interface Observer {
-    void updateNoteData(int position, NoteData noteData);
+public interface ObserverScroll {
+    void scrollNoteData();
 }

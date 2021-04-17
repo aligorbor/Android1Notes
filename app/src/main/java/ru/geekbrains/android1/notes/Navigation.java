@@ -7,17 +7,29 @@ import androidx.fragment.app.FragmentTransaction;
 public class Navigation {
     private final FragmentManager fragmentManager;
 
-    public Navigation(FragmentManager fragmentManager){
+    public Navigation(FragmentManager fragmentManager) {
         this.fragmentManager = fragmentManager;
     }
 
     public void addFragment(Fragment fragment, boolean useBackStack) {
-        addFragment(fragment,useBackStack,R.id.fragment_container);
+        addFragment(fragment, useBackStack, R.id.fragment_container);
     }
+
     public void addFragment(Fragment fragment, boolean useBackStack, int containerId) {
         // Открыть транзакцию
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(containerId, fragment);
+        if (useBackStack) {
+            fragmentTransaction.addToBackStack(null);
+        }
+        // Закрыть транзакцию
+        fragmentTransaction.commit();
+    }
+
+    public void removeFragment(Fragment fragment, boolean useBackStack) {
+        // Открыть транзакцию
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.remove(fragment);
         if (useBackStack) {
             fragmentTransaction.addToBackStack(null);
         }

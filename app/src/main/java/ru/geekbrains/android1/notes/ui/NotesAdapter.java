@@ -18,6 +18,7 @@ import java.util.Locale;
 
 import ru.geekbrains.android1.notes.R;
 import ru.geekbrains.android1.notes.data.NoteData;
+import ru.geekbrains.android1.notes.data.NoteTag;
 import ru.geekbrains.android1.notes.data.NotesSource;
 
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> {
@@ -26,10 +27,12 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> 
     private final Fragment fragment;
     private OnItemClickListener itemClickListener;
     private int menuPosition;
+    private NoteTag noteTag;
 
-    public NotesAdapter(NotesSource dataSource, Fragment fragment) {
+    public NotesAdapter(NotesSource dataSource, Fragment fragment, NoteTag noteTag) {
         this.dataSource = dataSource;
         this.fragment = fragment;
+        this.noteTag = noteTag;
     }
 
     @NonNull
@@ -81,7 +84,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> 
 
             registerContextMenu(itemView);
 
-            title.setOnClickListener(v -> itemClickListener.onItemClick(v, getAdapterPosition()));
+            title.setOnClickListener(v -> itemClickListener.onItemClick(v, ViewHolder.this.getAdapterPosition()));
             title.setOnLongClickListener(new View.OnLongClickListener() {
                 @RequiresApi(api = Build.VERSION_CODES.N)
                 @Override
@@ -101,7 +104,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> 
         private void registerContextMenu(View itemView) {
             if (fragment != null) {
                 itemView.setOnLongClickListener(v -> {
-                    menuPosition = getLayoutPosition();
+                    menuPosition = ViewHolder.this.getLayoutPosition();
                     return false;
                 });
                 fragment.registerForContextMenu(itemView);
@@ -111,7 +114,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> 
         public void setData(NoteData noteData) {
             title.setText(noteData.getTitle());
             description.setText(noteData.getDescription());
-            tag.setText(String.format(Locale.getDefault(), "%d", noteData.getTag()));
+            tag.setText(noteTag.getNoteTag(noteData.getTag()));
             date.setText(new SimpleDateFormat("dd-MM-yy hh:mm", Locale.getDefault()).format(noteData.getDate()));
             like.setChecked(noteData.isLike());
         }

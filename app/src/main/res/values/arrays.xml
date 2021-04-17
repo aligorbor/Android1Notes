@@ -5,4 +5,10 @@
        <item>Note 2</item>
        <item>Note 3</item>
    </string-array>
+    <string-array name="tags">
+        <item>No tag</item>
+        <item>Work</item>
+        <item>Personal</item>
+        <item>Everyday</item>
+    </string-array>
 </resources>

@@ -25,6 +25,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -33,11 +35,14 @@ import java.util.Locale;
 import ru.geekbrains.android1.notes.MainActivity;
 import ru.geekbrains.android1.notes.R;
 import ru.geekbrains.android1.notes.data.NoteData;
+import ru.geekbrains.android1.notes.data.NoteTag;
+import ru.geekbrains.android1.notes.observe.ObserverScroll;
 import ru.geekbrains.android1.notes.observe.Publisher;
 
 
 public class NoteFragment extends Fragment {
     private static final String ARG_NOTE_DATA = "Param_NoteData";
+    private static final String ARG_POSITION = "Param_Position";
     private NoteData noteData;
     private Publisher publisher;
 
@@ -47,21 +52,30 @@ public class NoteFragment extends Fragment {
     private TextView textNoteDate;
     private CheckBox checkNoteLike;
     private final Calendar today = Calendar.getInstance();
+    private int position;
+    private NoteTag noteTag;
+
+    private ObserverScroll observerScroll;
 
     public NoteFragment() {
         // Required empty public constructor
     }
 
-    public static NoteFragment newInstance(NoteData noteData) {
+    public static NoteFragment newInstance(int position, NoteData noteData) {
         NoteFragment fragment = new NoteFragment();
         Bundle args = new Bundle();
         args.putParcelable(ARG_NOTE_DATA, noteData);
+        args.putInt(ARG_POSITION, position);
         fragment.setArguments(args);
         return fragment;
     }
 
     public static NoteFragment newInstance() {
-        return new NoteFragment();
+        NoteFragment fragment = new NoteFragment();
+        Bundle args = new Bundle();
+        args.putInt(ARG_POSITION, -1);
+        fragment.setArguments(args);
+        return fragment;
     }
 
     @Override
@@ -82,7 +96,11 @@ public class NoteFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             noteData = getArguments().getParcelable(ARG_NOTE_DATA);
+            position = getArguments().getInt(ARG_POSITION);
         }
+        observerScroll = this::saveToNoteData;
+        publisher.subscribeScroll(observerScroll);
+        noteTag = new NoteTag(getResources()).init();
     }
 
     @Override
@@ -100,22 +118,30 @@ public class NoteFragment extends Fragment {
         return view;
     }
 
-    @Override
-    public void onStop() {
-        super.onStop();
-        noteData = collectNoteData();
-    }
+    //    @Override
+//    public void onStop() {
+//        super.onStop();
+//        noteData = collectNoteData();
+//    }
 
     @Override
     public void onDestroy() {
+        publisher.unsubscribeScroll(observerScroll);
         super.onDestroy();
-        publisher.notifySingle(noteData);
     }
 
     @Override
     public void onPause() {
+        saveToNoteData();
         super.onPause();
-        //    fillNote();
+    }
+
+    private void saveToNoteData() {
+        noteData = collectNoteData();
+        if (position >= 0)
+            publisher.notifySingle(position, noteData);
+        else
+            publisher.notifyAdd(noteData);
     }
 
     @Override
@@ -157,10 +183,10 @@ public class NoteFragment extends Fragment {
             Menu menu = popupMenu.getMenu();
             //        menu.add(0, 123456, 12, R.string.new_menu_item_added);
             int i = 0;
-            String strTag = getNoteTag(i);
+            String strTag = noteTag.getNoteTag(i);
             while (strTag != null) {
                 menu.add(strTag);
-                strTag = getNoteTag(++i);
+                strTag = noteTag.getNoteTag(++i);
             }
             popupMenu.setOnMenuItemClickListener(item -> {
                 String title = item.getTitle().toString();
@@ -177,12 +203,19 @@ public class NoteFragment extends Fragment {
         textNoteTag = view.findViewById(R.id.textNoteTag);
         textNoteDate = view.findViewById(R.id.textNoteDate);
         checkNoteLike = view.findViewById(R.id.checkNoteLike);
+        FloatingActionButton fabSave = view.findViewById(R.id.fabSave);
+        fabSave.setOnClickListener(v -> {
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                saveToNoteData();
+            } else
+                requireActivity().onBackPressed();
+        });
     }
 
     private void fillViews() {
         editTextTitle.setText(noteData.getTitle());
         editTextNote.setText(noteData.getNoteText());
-        textNoteTag.setText(getNoteTag(noteData.getTag()));
+        textNoteTag.setText(noteTag.getNoteTag(noteData.getTag()));
         checkNoteLike.setChecked(noteData.isLike());
         today.setTime(noteData.getDate());
         setInitialDateTime();
@@ -191,32 +224,10 @@ public class NoteFragment extends Fragment {
     private NoteData collectNoteData() {
         String textTitle = editTextTitle.getText().toString();
         String textNote = editTextNote.getText().toString();
-        int tag = setNoteTag(textNoteTag.getText().toString());
+        int tag = noteTag.getIndexNoteTag(textNoteTag.getText().toString());
         Date date = new Date(today.getTimeInMillis());
         boolean like = checkNoteLike.isChecked();
         return new NoteData(textTitle, date, tag, like, textNote);
-    }
-
-    private String getNoteTag(int tag) {
-        switch (tag) {
-            case 0:
-                return getString(R.string.note_tag_none);
-            case 1:
-                return getString(R.string.note_tag1);
-            case 2:
-                return getString(R.string.note_tag2);
-            case 3:
-                return getString(R.string.note_tag3);
-        }
-        return null;
-    }
-
-    private int setNoteTag(String strTag) {
-        if (strTag.equals(getString(R.string.note_tag_none))) return 0;
-        if (strTag.equals(getString(R.string.note_tag1))) return 1;
-        if (strTag.equals(getString(R.string.note_tag2))) return 2;
-        if (strTag.equals(getString(R.string.note_tag3))) return 3;
-        return 0;
     }
 
     private void initDatePickerDialog() {
@@ -254,5 +265,4 @@ public class NoteFragment extends Fragment {
                 DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_SHOW_YEAR
                         | DateUtils.FORMAT_SHOW_TIME));
     }
-
 }

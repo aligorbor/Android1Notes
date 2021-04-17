@@ -8,5 +8,6 @@
 
     <dimen name="textDescription">20sp</dimen>
     <dimen name="textTitle">25sp</dimen>
+    <dimen name="fab_margin">20dp</dimen>
 
 </resources>

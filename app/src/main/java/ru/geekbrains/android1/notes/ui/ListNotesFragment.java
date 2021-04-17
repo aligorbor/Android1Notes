@@ -22,20 +22,19 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.Date;
-import java.util.List;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import ru.geekbrains.android1.notes.MainActivity;
 import ru.geekbrains.android1.notes.Navigation;
 import ru.geekbrains.android1.notes.R;
 import ru.geekbrains.android1.notes.data.NoteData;
+import ru.geekbrains.android1.notes.data.NoteTag;
 import ru.geekbrains.android1.notes.data.NotesSource;
 import ru.geekbrains.android1.notes.data.NotesSourceImpl;
 import ru.geekbrains.android1.notes.observe.Observer;
+import ru.geekbrains.android1.notes.observe.ObserverAdd;
 import ru.geekbrains.android1.notes.observe.Publisher;
 
 public class ListNotesFragment extends Fragment {
@@ -46,6 +45,10 @@ public class ListNotesFragment extends Fragment {
     private Navigation navigation;
     private Publisher publisher;
     private boolean tile = false;
+    private int currentPosition;
+    private Observer observer;
+    private Fragment currentNoteFragment;
+    private NoteTag noteTag;
 
     private boolean moveToLastPosition;
 
@@ -73,12 +76,23 @@ public class ListNotesFragment extends Fragment {
     }
 
     @Override
+    public void onDestroy() {
+        publisher.unsubscribe(observer);
+        super.onDestroy();
+    }
+
+    @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Получим источник данных для списка
         // Поскольку onCreateView запускается каждый раз
         // при возврате в фрагмент, данные надо создавать один раз
+        noteTag = new NoteTag(getResources()).init();
         data = new NotesSourceImpl(getResources()).init();
+        observer = (position, noteData) -> {
+            data.updateNoteData(position, noteData);
+            adapter.notifyItemChanged(position);
+        };
     }
 
     @Override
@@ -86,6 +100,7 @@ public class ListNotesFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_list_notes, container, false);
+        currentPosition = -1;
         initView(view);
         setHasOptionsMenu(true);
         return view;
@@ -119,19 +134,13 @@ public class ListNotesFragment extends Fragment {
 //                adapter.notifyItemInserted(data.size()-1);
 //            //    recyclerView.scrollToPosition(data.size()-1);
 //                recyclerView.smoothScrollToPosition(data.size()-1);
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE)
-                    navigation.addFragment(NoteFragment.newInstance(), true, R.id.fragment_note);
-                else
-                    navigation.addFragment(NoteFragment.newInstance(), true);
-                publisher.subscribe(noteData -> {
-                    data.addNoteData(noteData);
-                    adapter.notifyItemInserted(data.size() - 1);
-                    // это сигнал, чтобы вызванный метод onCreateView
-                    // перепрыгнул на конец списка
-                    moveToLastPosition = true;
-                });
+                showNoteForAdd();
                 return true;
             case R.id.action_clear:
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    if (currentNoteFragment != null)
+                        navigation.removeFragment(currentNoteFragment, false);
+                }
                 data.clearNoteData();
                 adapter.notifyDataSetChanged();
                 return true;
@@ -149,7 +158,25 @@ public class ListNotesFragment extends Fragment {
         return super.onOptionsItemSelected(item);
     }
 
+    private void showNoteForAdd() {
+        currentNoteFragment = NoteFragment.newInstance();
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            publisher.notifyScroll();
+            navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
+        } else
+            navigation.addFragment(currentNoteFragment, true);
+        publisher.subscribeAdd(noteData -> {
+            data.addNoteData(noteData);
+            adapter.notifyItemInserted(data.size() - 1);
+            // это сигнал, чтобы вызванный метод onCreateView
+            // перепрыгнул на конец списка
+            moveToLastPosition = true;
+        });
+    }
+
     private void initView(View view) {
+        FloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
+        fabAdd.setOnClickListener(v -> showNoteForAdd());
         recyclerView = view.findViewById(R.id.recycler_view_lines);
         initRecyclerView();
     }
@@ -166,7 +193,7 @@ public class ListNotesFragment extends Fragment {
     private void initRecyclerView() {
         //  recyclerView.setHasFixedSize(true);
         setLayoutManager(tile);
-        adapter = new NotesAdapter(data, this);
+        adapter = new NotesAdapter(data, this, noteTag);
         recyclerView.setAdapter(adapter);
         DividerItemDecoration itemDecoration = new DividerItemDecoration(getContext(), LinearLayoutManager.VERTICAL);
         itemDecoration.setDrawable(getResources().getDrawable(R.drawable.separator, null));
@@ -181,18 +208,9 @@ public class ListNotesFragment extends Fragment {
             recyclerView.smoothScrollToPosition(data.size() - 1);
             moveToLastPosition = false;
         }
-
         adapter.setItemClickListener((view, position) -> {
             //          Toast.makeText(getContext(),String.format("Позиция - %d",position),Toast.LENGTH_SHORT).show();
-            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE)
-                navigation.addFragment(NoteFragment.newInstance(data.getNoteData(position)), true, R.id.fragment_note);
-            else
-                navigation.addFragment(NoteFragment.newInstance(data.getNoteData(position)), true);
-            publisher.subscribe(noteData -> {
-                data.updateNoteData(position, noteData);
-                adapter.notifyItemChanged(position);
-            });
-
+            showNoteForUpdate(position);
         });
     }
 
@@ -210,17 +228,13 @@ public class ListNotesFragment extends Fragment {
         switch (item.getItemId()) {
             case R.id.action_update:
 //                data.updateNoteData(position,new NoteData("Кадр " + position, data.getNoteData(position).getDate(), data.getNoteData(position).getTag(),false,data.getNoteData(position).getNoteText()));
-//                adapter.notifyItemChanged(position);
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE)
-                    navigation.addFragment(NoteFragment.newInstance(data.getNoteData(position)), true, R.id.fragment_note);
-                else
-                    navigation.addFragment(NoteFragment.newInstance(data.getNoteData(position)), true);
-                publisher.subscribe(noteData -> {
-                    data.updateNoteData(position, noteData);
-                    adapter.notifyItemChanged(position);
-                });
+                showNoteForUpdate(position);
                 return true;
             case R.id.action_delete:
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    if (currentNoteFragment != null)
+                        navigation.removeFragment(currentNoteFragment, false);
+                }
                 data.deleteNoteData(position);
                 adapter.notifyItemRemoved(position);
                 return true;
@@ -228,4 +242,18 @@ public class ListNotesFragment extends Fragment {
         return super.onContextItemSelected(item);
     }
 
+    private void showNoteForUpdate(int position) {
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            publisher.notifyScroll();
+            if (position != currentPosition) {
+                currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
+                navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
+            }
+        } else {
+            currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
+            navigation.addFragment(currentNoteFragment, true);
+        }
+        currentPosition = position;
+        publisher.subscribe(observer);
+    }
 }
