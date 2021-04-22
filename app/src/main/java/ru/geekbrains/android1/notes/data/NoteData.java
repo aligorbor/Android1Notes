@@ -7,6 +7,7 @@ import java.util.Date;
 
 public class NoteData implements Parcelable {
     final static int lengthDescription = 50;
+    private String id; // идентификатор
     private final String title;       // заголовок
     private final String description; // описание
     private final Date date;
@@ -43,6 +44,14 @@ public class NoteData implements Parcelable {
             return new NoteData[size];
         }
     };
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getTitle() {
         return title;

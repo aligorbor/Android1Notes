@@ -227,7 +227,11 @@ public class NoteFragment extends Fragment {
         int tag = noteTag.getIndexNoteTag(textNoteTag.getText().toString());
         Date date = new Date(today.getTimeInMillis());
         boolean like = checkNoteLike.isChecked();
-        return new NoteData(textTitle, date, tag, like, textNote);
+
+        NoteData answer = new NoteData(textTitle, date, tag, like, textNote);
+        if (noteData != null)
+            answer.setId(noteData.getId());
+        return answer;
     }
 
     private void initDatePickerDialog() {

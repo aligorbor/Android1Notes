@@ -32,7 +32,9 @@ import ru.geekbrains.android1.notes.R;
 import ru.geekbrains.android1.notes.data.NoteData;
 import ru.geekbrains.android1.notes.data.NoteTag;
 import ru.geekbrains.android1.notes.data.NotesSource;
+import ru.geekbrains.android1.notes.data.NotesSourceFirebaseImpl;
 import ru.geekbrains.android1.notes.data.NotesSourceImpl;
+import ru.geekbrains.android1.notes.data.NotesSourceResponse;
 import ru.geekbrains.android1.notes.observe.Observer;
 import ru.geekbrains.android1.notes.observe.ObserverAdd;
 import ru.geekbrains.android1.notes.observe.Publisher;
@@ -50,7 +52,7 @@ public class ListNotesFragment extends Fragment {
     private Fragment currentNoteFragment;
     private NoteTag noteTag;
 
-    private boolean moveToLastPosition;
+    private boolean moveToFirstPosition;
 
     public ListNotesFragment() {
         // Required empty public constructor
@@ -88,7 +90,7 @@ public class ListNotesFragment extends Fragment {
         // Поскольку onCreateView запускается каждый раз
         // при возврате в фрагмент, данные надо создавать один раз
         noteTag = new NoteTag(getResources()).init();
-        data = new NotesSourceImpl(getResources()).init();
+        //     data = new NotesSourceImpl(getResources()).init();
         observer = (position, noteData) -> {
             data.updateNoteData(position, noteData);
             adapter.notifyItemChanged(position);
@@ -103,6 +105,8 @@ public class ListNotesFragment extends Fragment {
         currentPosition = -1;
         initView(view);
         setHasOptionsMenu(true);
+        data = new NotesSourceFirebaseImpl().init(notesSource -> adapter.notifyDataSetChanged());
+        adapter.setDataSource(data);
         return view;
     }
 
@@ -128,7 +132,93 @@ public class ListNotesFragment extends Fragment {
     @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
+        return onItemSelected(item.getItemId(), 0) || super.onOptionsItemSelected(item);
+    }
+
+    private void showNoteForAdd() {
+        currentNoteFragment = NoteFragment.newInstance();
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            publisher.notifyScroll();
+            navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
+        } else
+            navigation.addFragment(currentNoteFragment, true);
+        publisher.subscribeAdd(noteData -> {
+            data.addNoteData(noteData);
+            adapter.notifyItemInserted(data.size() - 1);
+            // это сигнал, чтобы вызванный метод onCreateView
+            // перепрыгнул на конец списка
+            moveToFirstPosition = true;
+        });
+    }
+
+    private void initView(View view) {
+        FloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
+        fabAdd.setOnClickListener(v -> showNoteForAdd());
+        recyclerView = view.findViewById(R.id.recycler_view_lines);
+        initRecyclerView();
+    }
+
+    private void setLayoutManager(boolean tile) {
+        LinearLayoutManager layoutManager;
+        if (tile)
+            layoutManager = new GridLayoutManager(getContext(), 2);
+        else
+            layoutManager = new LinearLayoutManager(getContext());
+        recyclerView.setLayoutManager(layoutManager);
+    }
+
+    private void initRecyclerView() {
+        //  recyclerView.setHasFixedSize(true);
+        setLayoutManager(tile);
+        adapter = new NotesAdapter(this, noteTag);
+        recyclerView.setAdapter(adapter);
+        DividerItemDecoration itemDecoration = new DividerItemDecoration(getContext(), LinearLayoutManager.VERTICAL);
+        itemDecoration.setDrawable(getResources().getDrawable(R.drawable.separator, null));
+        recyclerView.addItemDecoration(itemDecoration);
+
+        DefaultItemAnimator animator = new DefaultItemAnimator();
+        animator.setAddDuration(MY_DEFAULT_DURATION);
+        animator.setRemoveDuration(MY_DEFAULT_DURATION);
+        recyclerView.setItemAnimator(animator);
+
+        if (moveToFirstPosition && data.size() > 0) {
+            recyclerView.scrollToPosition(0);
+            moveToFirstPosition = false;
+        }
+        adapter.setItemClickListener((view, position) -> {
+            //          Toast.makeText(getContext(),String.format("Позиция - %d",position),Toast.LENGTH_SHORT).show();
+            showNoteForUpdate(position);
+        });
+    }
+
+    @Override
+    public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v, @Nullable ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        MenuInflater inflater = requireActivity().getMenuInflater();
+        inflater.inflate(R.menu.context, menu);
+    }
+
+    @SuppressLint("NonConstantResourceId")
+    @Override
+    public boolean onContextItemSelected(@NonNull MenuItem item) {
+        int position = adapter.getMenuPosition();
+        return onItemSelected(item.getItemId(), position) || super.onContextItemSelected(item);
+    }
+
+    private boolean onItemSelected(int menuItemId, int position) {
+        switch (menuItemId) {
+            case R.id.action_update:
+//                data.updateNoteData(position,new NoteData("Кадр " + position, data.getNoteData(position).getDate(), data.getNoteData(position).getTag(),false,data.getNoteData(position).getNoteText()));
+                showNoteForUpdate(position);
+                return true;
+            case R.id.action_delete:
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    if (currentNoteFragment != null)
+                        navigation.removeFragment(currentNoteFragment, false);
+                }
+                data.deleteNoteData(position);
+                adapter.notifyItemRemoved(position);
+                return true;
             case R.id.action_add:
 //                data.addNoteData(new NoteData("Заголовок " + data.size(), new Date(), 0,true,"Описание "+data.size()));
 //                adapter.notifyItemInserted(data.size()-1);
@@ -155,91 +245,7 @@ public class ListNotesFragment extends Fragment {
                 Toast.makeText(getContext(), "action_search", Toast.LENGTH_SHORT).show();
                 return true;
         }
-        return super.onOptionsItemSelected(item);
-    }
-
-    private void showNoteForAdd() {
-        currentNoteFragment = NoteFragment.newInstance();
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            publisher.notifyScroll();
-            navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
-        } else
-            navigation.addFragment(currentNoteFragment, true);
-        publisher.subscribeAdd(noteData -> {
-            data.addNoteData(noteData);
-            adapter.notifyItemInserted(data.size() - 1);
-            // это сигнал, чтобы вызванный метод onCreateView
-            // перепрыгнул на конец списка
-            moveToLastPosition = true;
-        });
-    }
-
-    private void initView(View view) {
-        FloatingActionButton fabAdd = view.findViewById(R.id.fabAdd);
-        fabAdd.setOnClickListener(v -> showNoteForAdd());
-        recyclerView = view.findViewById(R.id.recycler_view_lines);
-        initRecyclerView();
-    }
-
-    private void setLayoutManager(boolean tile) {
-        LinearLayoutManager layoutManager;
-        if (tile)
-            layoutManager = new GridLayoutManager(getContext(), 2);
-        else
-            layoutManager = new LinearLayoutManager(getContext());
-        recyclerView.setLayoutManager(layoutManager);
-    }
-
-    private void initRecyclerView() {
-        //  recyclerView.setHasFixedSize(true);
-        setLayoutManager(tile);
-        adapter = new NotesAdapter(data, this, noteTag);
-        recyclerView.setAdapter(adapter);
-        DividerItemDecoration itemDecoration = new DividerItemDecoration(getContext(), LinearLayoutManager.VERTICAL);
-        itemDecoration.setDrawable(getResources().getDrawable(R.drawable.separator, null));
-        recyclerView.addItemDecoration(itemDecoration);
-
-        DefaultItemAnimator animator = new DefaultItemAnimator();
-        animator.setAddDuration(MY_DEFAULT_DURATION);
-        animator.setRemoveDuration(MY_DEFAULT_DURATION);
-        recyclerView.setItemAnimator(animator);
-
-        if (moveToLastPosition) {
-            recyclerView.smoothScrollToPosition(data.size() - 1);
-            moveToLastPosition = false;
-        }
-        adapter.setItemClickListener((view, position) -> {
-            //          Toast.makeText(getContext(),String.format("Позиция - %d",position),Toast.LENGTH_SHORT).show();
-            showNoteForUpdate(position);
-        });
-    }
-
-    @Override
-    public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v, @Nullable ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        MenuInflater inflater = requireActivity().getMenuInflater();
-        inflater.inflate(R.menu.context, menu);
-    }
-
-    @SuppressLint("NonConstantResourceId")
-    @Override
-    public boolean onContextItemSelected(@NonNull MenuItem item) {
-        int position = adapter.getMenuPosition();
-        switch (item.getItemId()) {
-            case R.id.action_update:
-//                data.updateNoteData(position,new NoteData("Кадр " + position, data.getNoteData(position).getDate(), data.getNoteData(position).getTag(),false,data.getNoteData(position).getNoteText()));
-                showNoteForUpdate(position);
-                return true;
-            case R.id.action_delete:
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    if (currentNoteFragment != null)
-                        navigation.removeFragment(currentNoteFragment, false);
-                }
-                data.deleteNoteData(position);
-                adapter.notifyItemRemoved(position);
-                return true;
-        }
-        return super.onContextItemSelected(item);
+        return false;
     }
 
     private void showNoteForUpdate(int position) {

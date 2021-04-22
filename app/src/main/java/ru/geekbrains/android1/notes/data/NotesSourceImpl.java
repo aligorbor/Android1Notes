@@ -17,10 +17,13 @@ public class NotesSourceImpl implements NotesSource {
         this.resources = resources;
     }
 
-    public NotesSourceImpl init() {
+    public NotesSourceImpl init(NotesSourceResponse notesSourceResponse) {
         String[] titles = resources.getStringArray(R.array.titles);
         for (String title : titles) {
             dataSource.add(new NoteData(title, Calendar.getInstance().getTime(), 0, false, title + " text of the note"));
+        }
+        if (notesSourceResponse != null) {
+            notesSourceResponse.initialized(this);
         }
         return this;
     }

@@ -22,6 +22,7 @@ import com.google.android.material.navigation.NavigationView;
 import ru.geekbrains.android1.notes.observe.Publisher;
 import ru.geekbrains.android1.notes.ui.ListNotesFragment;
 import ru.geekbrains.android1.notes.ui.SettingsFragment;
+import ru.geekbrains.android1.notes.ui.StartFragment;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -107,7 +108,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initFragments() {
-        getNavigation().addFragment(ListNotesFragment.newInstance(), false);
+        //   getNavigation().addFragment(ListNotesFragment.newInstance(), false);
+        getNavigation().addFragment(StartFragment.newInstance(), false);
     }
 
     @Override

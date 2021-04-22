@@ -23,16 +23,20 @@ import ru.geekbrains.android1.notes.data.NotesSource;
 
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.ViewHolder> {
     private final static String TAG = "NotesAdapter";
-    private final NotesSource dataSource;
+    private NotesSource dataSource;
     private final Fragment fragment;
     private OnItemClickListener itemClickListener;
     private int menuPosition;
-    private NoteTag noteTag;
+    private final NoteTag noteTag;
 
-    public NotesAdapter(NotesSource dataSource, Fragment fragment, NoteTag noteTag) {
-        this.dataSource = dataSource;
+    public NotesAdapter(Fragment fragment, NoteTag noteTag) {
         this.fragment = fragment;
         this.noteTag = noteTag;
+    }
+
+    public void setDataSource(NotesSource dataSource) {
+        this.dataSource = dataSource;
+        notifyDataSetChanged();
     }
 
     @NonNull

@@ -36,4 +36,8 @@
     <string name="title">Title</string>
     <string name="add_note">Add note</string>
     <string name="save_note">Save note</string>
+    <string name="continue_">Продолжить...</string>
+    <string name="facebook_app_id">463476831587838</string>
+    <string name="fb_login_protocol_scheme">fb463476831587838</string>
+
 </resources>
