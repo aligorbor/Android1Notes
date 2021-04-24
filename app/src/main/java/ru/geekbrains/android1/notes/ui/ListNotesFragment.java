@@ -2,11 +2,13 @@ package ru.geekbrains.android1.notes.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Configuration;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DefaultItemAnimator;
@@ -22,6 +24,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -29,12 +32,9 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import ru.geekbrains.android1.notes.MainActivity;
 import ru.geekbrains.android1.notes.Navigation;
 import ru.geekbrains.android1.notes.R;
-import ru.geekbrains.android1.notes.data.NoteData;
 import ru.geekbrains.android1.notes.data.NoteTag;
 import ru.geekbrains.android1.notes.data.NotesSource;
 import ru.geekbrains.android1.notes.data.NotesSourceFirebaseImpl;
-import ru.geekbrains.android1.notes.data.NotesSourceImpl;
-import ru.geekbrains.android1.notes.data.NotesSourceResponse;
 import ru.geekbrains.android1.notes.observe.Observer;
 import ru.geekbrains.android1.notes.observe.ObserverAdd;
 import ru.geekbrains.android1.notes.observe.Publisher;
@@ -47,8 +47,11 @@ public class ListNotesFragment extends Fragment {
     private Navigation navigation;
     private Publisher publisher;
     private boolean tile = false;
+    private boolean noteDialog = true;
+
     private int currentPosition;
     private Observer observer;
+    private ObserverAdd observerAdd;
     private Fragment currentNoteFragment;
     private NoteTag noteTag;
 
@@ -95,6 +98,15 @@ public class ListNotesFragment extends Fragment {
             data.updateNoteData(position, noteData);
             adapter.notifyItemChanged(position);
         };
+        observerAdd = (noteData -> {
+            data.addNoteData(noteData);
+            adapter.notifyItemInserted(0);
+            // это сигнал, чтобы вызванный метод onCreateView
+            // перепрыгнул на конец списка
+            moveToFirstPosition = true;
+            recyclerView.scrollToPosition(0);
+        //    recyclerView.smoothScrollToPosition(0);
+        });
     }
 
     @Override
@@ -133,22 +145,6 @@ public class ListNotesFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         return onItemSelected(item.getItemId(), 0) || super.onOptionsItemSelected(item);
-    }
-
-    private void showNoteForAdd() {
-        currentNoteFragment = NoteFragment.newInstance();
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            publisher.notifyScroll();
-            navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
-        } else
-            navigation.addFragment(currentNoteFragment, true);
-        publisher.subscribeAdd(noteData -> {
-            data.addNoteData(noteData);
-            adapter.notifyItemInserted(data.size() - 1);
-            // это сигнал, чтобы вызванный метод onCreateView
-            // перепрыгнул на конец списка
-            moveToFirstPosition = true;
-        });
     }
 
     private void initView(View view) {
@@ -212,34 +208,24 @@ public class ListNotesFragment extends Fragment {
                 showNoteForUpdate(position);
                 return true;
             case R.id.action_delete:
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    if (currentNoteFragment != null)
-                        navigation.removeFragment(currentNoteFragment, false);
-                }
-                data.deleteNoteData(position);
-                adapter.notifyItemRemoved(position);
+                actionDelete(position);
                 return true;
             case R.id.action_add:
-//                data.addNoteData(new NoteData("Заголовок " + data.size(), new Date(), 0,true,"Описание "+data.size()));
-//                adapter.notifyItemInserted(data.size()-1);
-//            //    recyclerView.scrollToPosition(data.size()-1);
-//                recyclerView.smoothScrollToPosition(data.size()-1);
                 showNoteForAdd();
                 return true;
             case R.id.action_clear:
-                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    if (currentNoteFragment != null)
-                        navigation.removeFragment(currentNoteFragment, false);
-                }
-                data.clearNoteData();
-                adapter.notifyDataSetChanged();
+                actionClear();
                 return true;
             case R.id.action_view:
                 tile = !tile;
                 setLayoutManager(tile);
                 return true;
-            case R.id.action_sort:
-                Toast.makeText(getContext(), "action_sort", Toast.LENGTH_SHORT).show();
+            case R.id.action_dialog:
+                noteDialog = !noteDialog;
+                if (isLandscape() && currentNoteFragment != null) {
+                    navigation.removeFragment(currentNoteFragment, false);
+                }
+                //     Toast.makeText(getContext(), "action_sort", Toast.LENGTH_SHORT).show();
                 return true;
             case R.id.action_search:
                 Toast.makeText(getContext(), "action_search", Toast.LENGTH_SHORT).show();
@@ -248,18 +234,94 @@ public class ListNotesFragment extends Fragment {
         return false;
     }
 
-    private void showNoteForUpdate(int position) {
-        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+    private void actionDelete(int position) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle(R.string.alert_delete_title)
+                .setMessage(R.string.alert_delete)
+                .setCancelable(false)
+                .setNegativeButton(R.string.no, null)
+                .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
+                    if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        if (currentNoteFragment != null)
+                            navigation.removeFragment(currentNoteFragment, false);
+                    }
+                    data.deleteNoteData(position);
+                    adapter.notifyItemRemoved(position);
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    private void actionClear() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle(R.string.alert_clear_title)
+                .setMessage(R.string.alert_clear)
+                .setCancelable(false)
+                .setNegativeButton(R.string.no, null)
+                .setPositiveButton(getString(R.string.yes), (dialog, which) -> {
+                    if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        if (currentNoteFragment != null)
+                            navigation.removeFragment(currentNoteFragment, false);
+                    }
+                    data.clearNoteData();
+                    adapter.notifyDataSetChanged();
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    private void showNoteForAdd() {
+        if (isLandscape()) {
             publisher.notifyScroll();
-            if (position != currentPosition) {
-                currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
+            if (noteDialog) {
+                NoteFragmentDialog currentNoteFragmentD = NoteFragmentDialog.newInstance();
+                currentNoteFragmentD.show(getChildFragmentManager(), "transactionTag");
+                currentNoteFragment = currentNoteFragmentD;
+            } else {
+                currentNoteFragment = NoteFragment.newInstance();
                 navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
             }
         } else {
-            currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
-            navigation.addFragment(currentNoteFragment, true);
+            if (noteDialog) {
+                NoteFragmentDialog currentNoteFragmentD = NoteFragmentDialog.newInstance();
+                currentNoteFragmentD.show(getChildFragmentManager(), "transactionTag");
+                currentNoteFragment = currentNoteFragmentD;
+            } else {
+                currentNoteFragment = NoteFragment.newInstance();
+                navigation.addFragment(currentNoteFragment, true);
+            }
+        }
+        publisher.subscribeAdd(observerAdd);
+    }
+
+    private void showNoteForUpdate(int position) {
+        if (isLandscape()) {
+            publisher.notifyScroll();
+            if (position != currentPosition) {
+                if (noteDialog) {
+                    NoteFragmentDialog currentNoteFragmentD = NoteFragmentDialog.newInstance(position, data.getNoteData(position));
+                    currentNoteFragmentD.show(getChildFragmentManager(), "transactionTag");
+                    currentNoteFragment = currentNoteFragmentD;
+                } else {
+                    currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
+                    navigation.addFragment(currentNoteFragment, false, R.id.fragment_note);
+                }
+            }
+        } else {
+            if (noteDialog) {
+                NoteFragmentDialog currentNoteFragmentD = NoteFragmentDialog.newInstance(position, data.getNoteData(position));
+                currentNoteFragmentD.show(getChildFragmentManager(), "transactionTag");
+                currentNoteFragment = currentNoteFragmentD;
+            } else {
+                currentNoteFragment = NoteFragment.newInstance(position, data.getNoteData(position));
+                navigation.addFragment(currentNoteFragment, true);
+            }
         }
         currentPosition = position;
         publisher.subscribe(observer);
+    }
+
+    boolean isLandscape() {
+        return getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
     }
 }

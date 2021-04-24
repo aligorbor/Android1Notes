@@ -2,18 +2,10 @@ package ru.geekbrains.android1.notes.data;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,11 +64,13 @@ public class NotesSourceFirebaseImpl implements NotesSource {
     public void updateNoteData(int position, NoteData noteData) {
         String id = noteData.getId();
         collection.document(id).set(NoteDataMapping.toDocument(noteData));
+        notesData.set(position, noteData);
     }
 
     @Override
     public void addNoteData(NoteData noteData) {
         collection.add(NoteDataMapping.toDocument(noteData)).addOnSuccessListener(documentReference -> noteData.setId(documentReference.getId()));
+        notesData.add(0, noteData);
     }
 
     @Override

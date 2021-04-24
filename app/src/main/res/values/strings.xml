@@ -7,7 +7,7 @@
     <string name="search">Search</string>
     <string name="add">Add</string>
     <string name="view">List/Cards</string>
-    <string name="sort">Sort</string>
+    <string name="dialog">Dialog/Window</string>
     <string name="share">Share</string>
     <string name="add_link">Add link</string>
     <string name="add_photo">Add photo</string>
@@ -39,5 +39,11 @@
     <string name="continue_">Продолжить...</string>
     <string name="facebook_app_id">463476831587838</string>
     <string name="fb_login_protocol_scheme">fb463476831587838</string>
+    <string name="alert_delete">Delete note?</string>
+    <string name="alert_delete_title">Delete</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="alert_clear_title">Clear</string>
+    <string name="alert_clear">Clear all notes?</string>
 
 </resources>

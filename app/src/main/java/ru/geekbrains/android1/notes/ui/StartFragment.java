@@ -56,6 +56,7 @@ public class StartFragment extends Fragment {
     private MaterialButton continue_;
 
     private CallbackManager callbackManager;   //FB
+    private MainActivity activity;
 
 
     public StartFragment() {
@@ -75,7 +76,7 @@ public class StartFragment extends Fragment {
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        MainActivity activity = (MainActivity) context;
+        activity = (MainActivity) context;
         navigation = activity.getNavigation();
     }
 
@@ -145,7 +146,10 @@ public class StartFragment extends Fragment {
         emailView = view.findViewById(R.id.email);
         // Кнопка «Продолжить», будем показывать главный фрагмент
         continue_ = view.findViewById(R.id.continue_);
-        continue_.setOnClickListener(v -> navigation.addFragment(ListNotesFragment.newInstance(), false));
+        continue_.setOnClickListener(v -> {
+            activity.setAuthorized(true);
+            navigation.addFragment(ListNotesFragment.newInstance(), false);
+        });
     }
 
     @Override

@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Navigation navigation;
     private final Publisher publisher = new Publisher();
+    private boolean isAuthorized = false;
     //  private NotesSourceImpl data;
 
     @Override
@@ -41,8 +42,8 @@ public class MainActivity extends AppCompatActivity {
         //     if(savedInstanceState ==null)
         //           data = new NotesSourceImpl(getResources()).init();
         initView();
-
-        initFragments();
+        if (savedInstanceState == null)
+            initFragments();
     }
 
     private void initView() {
@@ -108,14 +109,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initFragments() {
-        //   getNavigation().addFragment(ListNotesFragment.newInstance(), false);
-        getNavigation().addFragment(StartFragment.newInstance(), false);
+        if (isAuthorized)
+            getNavigation().addFragment(ListNotesFragment.newInstance(), false);
+        else
+            getNavigation().addFragment(StartFragment.newInstance(), false);
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         //    outState.putSerializable(KEY_NOTES, data);
+        outState.putBoolean(KEY_NOTES, isAuthorized);
     }
 
     @Override
@@ -123,6 +127,8 @@ public class MainActivity extends AppCompatActivity {
         super.onRestoreInstanceState(savedInstanceState);
         //    data = (NotesSourceImpl) savedInstanceState.getSerializable(KEY_NOTES);
         //  initFragments();
+        isAuthorized = savedInstanceState.getBoolean(KEY_NOTES);
+        initFragments();
     }
 
     public Publisher getPublisher() {
@@ -152,4 +158,9 @@ public class MainActivity extends AppCompatActivity {
         }
         return super.dispatchTouchEvent(ev);
     }
+
+    public void setAuthorized(boolean authorized) {
+        isAuthorized = authorized;
+    }
+
 }

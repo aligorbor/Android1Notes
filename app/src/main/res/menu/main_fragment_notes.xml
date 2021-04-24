@@ -25,9 +25,9 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/action_sort"
+        android:id="@+id/action_dialog"
         android:orderInCategory="40"
-        android:title="@string/sort"
+        android:title="@string/dialog"
         app:showAsAction="never" />
 
     <item
